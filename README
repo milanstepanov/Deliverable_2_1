@@ -2,7 +2,10 @@ README File.
 # author:  Milan Stepanov
 # contact: milan.stepanov@l2s.centralesupelec.fr
 
-The code was verified on Ubuntu 16.04 and 18.04.
+The code consists of three parts: View Synthesis, Renderer and GUI. View synthesis stores a model of the network presented in OAVS paper 
+with the implementation of the inference phase and MATLAB wrapper around it. Renderer allows rendering of provided light field
+image based on the selected synthetic aperture parameters including perspective shift and refocusing. Finally, GIU allows communication
+with an instance of the Renderer class by setting the parameters of the synthetic aperture and visualization of the rendered image.
 
 Requrements:
 - Python (View Synthesis)
@@ -13,6 +16,8 @@ Requrements:
   - opencv-python
 - MATLAB (GUI)
   
+  
+The code was verified on Ubuntu 16.04 and 18.04.
 Tested using Python version 3.6. The moduels were
 installed using pip, e.g.
   pip install torch.
@@ -29,3 +34,5 @@ One can make a new environment in Anaconda and execute in terminal
 >> source activate conda_environment
 >> matlab
 which should set approapriate installed python environment for MATLAB.
+
+Navarro, J., and Sabater, N.Learning occlusion-aware view synthesisfor light fields.arXiv preprint arXiv:1905.11271(2019).
