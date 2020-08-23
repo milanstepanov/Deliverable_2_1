@@ -2,10 +2,7 @@ README File.
 # author:  Milan Stepanov
 # contact: milan.stepanov@l2s.centralesupelec.fr
 
-The code consists of three parts: View Synthesis, Renderer and GUI. View synthesis stores a model of the network presented in OAVS paper 
-with the implementation of the inference phase and MATLAB wrapper around it. Renderer allows rendering of provided light field
-image based on the selected synthetic aperture parameters including perspective shift and refocusing. Finally, GIU allows communication
-with an instance of the Renderer class by setting the parameters of the synthetic aperture and visualization of the rendered image.
+The code consists of three parts: View Synthesis, Renderer and GUI. View synthesis stores a model of the network presented in OAVS paper with the implementation of the inference phase and MATLAB wrapper around it. Renderer allows rendering of provided light field image based on the selected synthetic aperture parameters including perspective shift and refocusing. Finally, GIU allows communication with an instance of the Renderer class by setting the parameters of the synthetic aperture and visualization of the rendered image.
 
 Requrements:
 - Python (View Synthesis)
