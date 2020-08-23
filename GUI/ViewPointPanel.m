@@ -19,7 +19,11 @@ classdef ViewPointPanel < ListLayoutComponent
     v0=0
     radius=0
     Ap=[]
+    
+    main_panel
+    text
     panel
+    
     plotAxes
     clickAxes 
     ApAxes
@@ -44,11 +48,8 @@ classdef ViewPointPanel < ListLayoutComponent
   end
 
   properties ( Access = private )
-    uDragCurrent
-    vDragCurrent
-    middleButtonClicked = false
     buttonClicked = false
-
+    
     ValboxDecimalDigits=2
   end
 
@@ -103,7 +104,23 @@ classdef ViewPointPanel < ListLayoutComponent
           end
 
           %Main viewpoint panel
-          obj.panel = uipanel('Parent', ParentUI);
+          obj.main_panel = uipanel('Parent', ParentUI, ...
+                                   'Units','normalized');
+          
+          text_sep = .9;
+          obj.text = uicontrol('Parent', obj.main_panel, ...
+                               'Style','text', ...
+                               'String', "Aperture center");
+          obj.text.HorizontalAlignment = 'center';
+          obj.text.FontUnits = 'normalized';
+          obj.text.FontSize = .3;
+          obj.text.Units = 'normalized';
+          obj.text.Position = [0. text_sep 1. 1.-text_sep];
+        
+        
+          obj.panel = uipanel('Parent', obj.main_panel, ...
+                              'Units','normalized');
+          obj.panel.Position = [0. 0. 1. text_sep];
           obj.panel.set('ResizeFcn', ...
             @(src,evnt)ViewPointPanel.panelResize(obj,src,evnt));
 

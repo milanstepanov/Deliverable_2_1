@@ -3,106 +3,126 @@
 %% Clear environment
 clear; close all; clc;
 
-%% Set path to the python with installed PyTorch module
-try
-  pyversion /home/milan/anaconda3/envs/tfc/bin/python
-end
-addpath('/media/milan/SAVE/Code/MATLAB/deliverable/Demo', ...
-        '/media/milan/SAVE/Code/MATLAB/deliverable/GUI', ...
-        '/media/milan/SAVE/Code/MATLAB/deliverable/Render', ...
-        '/media/milan/SAVE/Code/MATLAB/deliverable/Synthesis');
-      
-%% Set the path to the root folder
-root_dir = '/media/milan/SAVE/Code/MATLAB/deliverable';
-cd(fullfile(root_dir, 'Synthesis'));
+%% PARAMETERS TO SET
+% Set path to the python with installed PyTorch module
+python_path = [];
+root_dir = []; % keeps folders "Demo", "GUI", "Render" and Synthesis"
 
-%% Load python libraries
-mod = py.importlib.import_module('oavs');
-py.importlib.reload(mod);
+path_to_test_lenslet = fullfile(root_dir,"Demo/IMG_2312_eslf.png");
+angul = 7; % set the angular size of the input lenslet
+is_8bits = true;
 
-% Load network
-net = mod.OAVS(fullfile(pwd, "/model_corr_b3_no_corners_no_decay_grad_best"));
+gamma = .45;
 
-%% Load Light Field data
-% path_to_lenslet = strcat("/home/milan/tmp_training_data/data/test-flowers/IMG_2287_eslf.png");
-path_to_lenslet = strcat("/home/milan/tmp_training_data/data/test/Rock.png");
-% path_to_lenslet = strcat("/media/milan/SAVE/Datasets/EPFL_light-field/PNG/Bikes.png");
-
-LF = imread(path_to_lenslet);
-
-%%
-% clip to 8bits
-LF = uint8(bitshift(LF, -8));
-
-
-%%
-gamma = .45; % TODO: set gamma if necessary.
-             % View Synthesis works better with gamma corrected images.
-if gamma>0
-  LF = uint8(((single(LF)./255).^gamma).*255);
-end
-
-%% Extraction of the corner views from the loaded lenset image
-
-angul = 7; % TODO: set the angular size of the input lenslet
-% 13; %
-
-step=1.; % Corresponds to the baseline between neighbouring views
-         % allows to synthesize LF more densely 
-
-pq_min = 1 + floor((angul-7)/2);         
-pq_max = pq_min + 7 - 1; % TODO: select the position of the corner views
-
-% extract corner views
-sample.c1 = extractView(LF, pq_min,pq_min, angul);
-sample.c2 = extractView(LF, pq_max,pq_min, angul);
-sample.c3 = extractView(LF, pq_min,pq_max, angul);
-sample.c4 = extractView(LF, pq_max,pq_max, angul);
-
-%%
-a = numel(1:step:7); % angular resolution of the synthesized LF
-[h, w, c] = size(LF);
-LF_prime = zeros(round(h/angul), round(w/angul), c, a, a, 'single'); % buffer to store synthesized LF
-Disparities = zeros(round(h/angul), round(w/angul), 1, a, a, 'single'); % buffer to store disparities 
-
-tic;
-for p=1:step:7
-  for q=1:step:7
-    
-    % angular positions of the view to be synthesized
-    sample.p = p-1; % 0-indexed notion used in Python
-    sample.q = q-1;
-   
-    % network inference
-    prediction = net.forward(sample);    
-    
-    % network outputs
-    pred = squeeze(uint8(prediction{'pred'})); % synthesized view
-    D = squeeze(single(prediction{'disp'})); % disparities
-    m = squeeze(single(prediction{'m'})); % fusion matrix
-    clear prediction;    
-    
-    % generate disparity map
-    [M,I] = max(m, [], 3);
-    I_ = medfilt2(I);
-    I_(I_==0) = I(I_==0);    
-    disp_map = zeros([size(I_), 4]);
-    for i=1:4
-      disp_map(:,:,i) = (I_==i);
-    end    
-    d = sum(D.*disp_map, 3);
-    
-    LF_prime(:,:,:, (1/step)*(q-1)+1,(1/step)*(p-1)+1) = single(pred)/255;
-    Disparities(:,:,:,(1/step)*(q-1)+1,(1/step)*(p-1)+1) = d;
-    
+%% Set Python
+% If MATLAB is invoked from the terminal with activated appropriate
+% these step is not necessary.
+if ~isempty(python_path)
+  try
+    pyversion(python_path); 
   end
 end
-elapsed_time = toc;
-disp(strcat("Time per view: ", num2str(elapsed_time/a)));
+
+% flag = int32(bitor(2, 8));
+% py.sys.setdlopenflags(flag);
+
+%%
+if isempty(root_dir)
+  root_dir = pwd;
+end
+
+%%
+addpath(fullfile(root_dir, 'Demo'), ...
+        fullfile(root_dir, 'GUI'), ...
+        fullfile(root_dir, 'Render'), ...
+        fullfile(root_dir, 'Synthesis'));
+      
+%% Synthesis
+  % Temporary moving to Synthesis folder to generate LF
+  cd(fullfile(root_dir, 'Synthesis'));
+
+  %% Load python libraries
+  mod = py.importlib.import_module('oavs');
+  py.importlib.reload(mod);
+
+  %% Load network
+  net = mod.OAVS(...
+    fullfile(pwd, ...
+             "/model_corr_b3_no_corners_no_decay_grad_best"), ...
+    false);
+
+  %% Load Light Field data
+  path_to_lenslet = path_to_test_lenslet;
+  LF = imread(path_to_lenslet);
+
+  %%
+  % clip to 8bits
+  if ~is_8bits
+    LF = uint8(bitshift(LF, -8));
+  end
+
+
+  %%
+  if gamma>0
+    LF = uint8(((single(LF)./255).^gamma).*255);
+  end
+
+  %% Extraction of the corner views from the loaded lenset image
+
+  step=1.; % Corresponds to the baseline between neighbouring views
+           % allows to synthesize LF more densely 
+  pq_min = 1 + floor((angul-7)/2);         
+  pq_max = pq_min + 7 - 1; % TODO: select the position of the corner views
+
+  % extract corner views
+  sample.c1 = extractView(LF, pq_min,pq_min, angul);
+  sample.c2 = extractView(LF, pq_max,pq_min, angul);
+  sample.c3 = extractView(LF, pq_min,pq_max, angul);
+  sample.c4 = extractView(LF, pq_max,pq_max, angul);
+
+  %%
+  a = numel(1:step:7); % angular resolution of the synthesized LF
+  [h, w, c] = size(LF);
+  LF_prime = zeros(round(h/angul), round(w/angul), c, a, a, 'single'); % buffer to store synthesized LF
+  Disparities = zeros(round(h/angul), round(w/angul), 1, a, a, 'single'); % buffer to store disparities 
+
+  tic;
+  for p=1:step:7
+    for q=1:step:7
+
+      % angular positions of the view to be synthesized
+      sample.p = p-1; % 0-indexed notion used in Python
+      sample.q = q-1;
+
+      % network inference
+      prediction = net.forward(sample);    
+
+      % network outputs
+      pred = squeeze(uint8(prediction{'pred'})); % synthesized view
+      D = squeeze(single(prediction{'disp'})); % disparities
+      m = squeeze(single(prediction{'m'})); % fusion matrix
+      clear prediction;    
+
+      % generate disparity map
+      [M,I] = max(m, [], 3);
+      I_ = medfilt2(I);
+      I_(I_==0) = I(I_==0);    
+      disp_map = zeros([size(I_), 4]);
+      for i=1:4
+        disp_map(:,:,i) = (I_==i);
+      end    
+      d = sum(D.*disp_map, 3);
+
+      LF_prime(:,:,:, (1/step)*(q-1)+1,(1/step)*(p-1)+1) = single(pred)/255;
+      Disparities(:,:,:,(1/step)*(q-1)+1,(1/step)*(p-1)+1) = d;
+
+    end
+  end
+  elapsed_time = toc;
+  disp(strcat("Time per view: ", num2str(elapsed_time/a/a)));
 
 
 %% Start Rendering Application
-
 cd(root_dir)
 RenderAppMain(LF_prime, Disparities);
 

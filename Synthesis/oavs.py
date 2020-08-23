@@ -8,29 +8,38 @@ import numpy as np
 
 class OAVS():
     
-    def __init__(self, path_to_model, use_cuda=True):
+    def __init__(self, path_to_model, use_cuda):
         
         # TODO: check if the model at the path exists        
         self.use_cuda = use_cuda
         
         print("Init...")
-        self.net = networks.OcclusionAwareVS(angular=7, dmax=4, use_cuda=use_cuda)
-        
-        try: # load model
+        self.net = networks.OcclusionAwareVS(angular=7, 
+                                             dmax=4,
+                                             use_cuda=self.use_cuda)
+        print("Network instantiated.")
 
-            checkpoint = torch.load(path_to_model) # path_to_best_model
+        print("Loading model...")
+        try: 
+            if self.use_cuda:
+              checkpoint = torch.load(path_to_model)      
+            else:
+              checkpoint = torch.load(path_to_model,
+                                      map_location=torch.device('cpu')) 
+
             print("Loaded checkpoint ", path_to_model)
-
-            self.net.load_state_dict(checkpoint['model_state_dict'])
-            print("Loaded state")
-            self.net.eval()
             
+            try:
+              self.net.load_state_dict(checkpoint['model_state_dict'])
+              print("Loaded state")
+            except:
+              print("Could not load network state.")
+
+            self.net.eval()
             print('Model loaded.')
 
-        except:
-            
+        except:            
             print('Model not loaded.')
-        
         
     def forward(self, sample):
         

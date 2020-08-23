@@ -1,4 +1,24 @@
 %% Test View Synthesis approach
+archs = py.importlib.import_module('network_v2');
+%%
+torch = py.importlib.import_module('torch');
+
+%%
+net = archs.OcclusionAwareVS(7, 4, 0);
+
+%%
+checkpoint = torch.load("model_corr_b3_no_corners_no_decay_grad_best", ...
+                        torch.device('cpu'));
+          %%
+          net.load_state_dict(checkpoint{'model_state_dict'});
+%%
+net.eval();
+%%
+sample.p=3;sample.q=3;
+%%
+pred = net.forward(sample.p, sample.q, sample.c1, sample.c2, sample.c3, sample.c4)
+
+
 
 %% Clear environment
 clear; close all; clc;

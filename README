@@ -1,0 +1,31 @@
+README File.
+# author:  Milan Stepanov
+# contact: milan.stepanov@l2s.centralesupelec.fr
+
+The code was verified on Ubuntu 16.04 and 18.04.
+
+Requrements:
+- Python (View Synthesis)
+- Python modules:
+  - numpy
+  - torch
+  - torchvision
+  - opencv-python
+- MATLAB (GUI)
+  
+Tested using Python version 3.6. The moduels were
+installed using pip, e.g.
+  pip install torch.
+The version of the required moduels at test time were:
+  opencv-python 4.4.0.42
+  torch         1.6.0
+  torchvision   0.7.0
+
+Tested on MATLAB R2018b and R2020a. Note MATLAB supports
+Python version 2.7, 3.5 and 3.6
+(https://www.mathworks.com/matlabcentral/answers/427187-problem-with-python-numpy).
+
+One can make a new environment in Anaconda and execute in terminal
+>> source activate conda_environment
+>> matlab
+which should set approapriate installed python environment for MATLAB.
