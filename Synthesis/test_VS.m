@@ -1,49 +1,56 @@
 %% Test View Synthesis approach
-archs = py.importlib.import_module('network_v2');
-%%
-torch = py.importlib.import_module('torch');
+% The scripts allows to synthesize LF views from corner views and, if
+% desired to visualize ground truth and generated views.
 
-%%
-net = archs.OcclusionAwareVS(7, 4, 0);
-
-%%
-checkpoint = torch.load("model_corr_b3_no_corners_no_decay_grad_best", ...
-                        torch.device('cpu'));
-          %%
-          net.load_state_dict(checkpoint{'model_state_dict'});
-%%
-net.eval();
-%%
-sample.p=3;sample.q=3;
-%%
-pred = net.forward(sample.p, sample.q, sample.c1, sample.c2, sample.c3, sample.c4)
-
-
-
-%% Clear environment
+%% Clear and prepare environment
 clear; close all; clc;
 
-%% Set path to the python with installed PyTorch module
-pyversion /home/milan/anaconda3/envs/tfc/bin/python
+% Set path to the python with installed PyTorch module
+% Must be run before any python-based action.
+% Run once! The environment is active for the following sessions.
+% pyversion python_path % MATLAB R2018b
+% pyenv('Version', '/home/milanstepanov/envs/torch/bin/python')
+
+% Helps loading appropriate environment.
+py.sys.setdlopenflags(int32(10));
+
+os = py.importlib.import_module('os');
+clear os.environ.MKL_NUM_THREADS
 
 %% Set the path to the root folder
-root_dir = '/media/milan/SAVE/Code/MATLAB/deliverable';
+root_dir = '/home/milanstepanov/Documents/Code/Deliverable_2_1'; % <- TODO
+% root_dir = []; % keeps folders "Demo", "GUI", "Render" and Synthesis"
+
+if isempty(root_dir) % if the folder is not defined it is assumed that the
+                     % current folder is the root
+  root_dir = pwd;
+end
+
 cd(fullfile(root_dir, 'Synthesis'));
 
-%% Load python libraries
+addpath(fullfile(root_dir, 'Demo'), ...
+        fullfile(root_dir, 'GUI'), ...
+        fullfile(root_dir, 'Render'), ...
+        fullfile(root_dir, 'Synthesis'));
+cd(fullfile(root_dir, 'Synthesis'));
+
+%% Load VS python library
 mod = py.importlib.import_module('oavs');
 py.importlib.reload(mod);
-
-% Load network
-net = mod.OAVS(fullfile(pwd, "/model_corr_b3_no_corners_no_decay_grad_best"));
+ 
+%% Load network
+new_model = true;
+net = mod.OAVS(...
+  fullfile(pwd, "model_corr_b3_no_corners_no_decay_grad_flowers_gamma_best"),...
+  false);
 
 %% Load lenslet LF image
-path_to_lenslet = strcat("/home/milan/tmp_training_data/data/", ...
-                         "test/Cars.png");
+path_to_lenslet = fullfile(root_dir, ...
+                         "Demo/IMG_2312_eslf.png"); % TODO: set input LF
 LF = imread(path_to_lenslet);
-%%
-gamma = .45;
-if gamma>0
+%% Set gamma
+gamma = .4;
+if gamma>0 
   LF = uint8(((single(LF)./255).^gamma).*255);
 end
 
@@ -81,7 +88,7 @@ end
 % contunue synthesizing LF.
 %
 
-
+%%
 step=1.; % if evaluating the performance the step must be set to 1
          % Corresponds to the baseline between neighbouring views
          % allows to synthesize LF more densely 
@@ -90,11 +97,17 @@ step=1.; % if evaluating the performance the step must be set to 1
 pq_max = 7; % TODO: select the position of the corner views
 
 % extract corner views
-sample.c1 = extractView(LF, 1,1, 7);
-sample.c2 = extractView(LF, pq_max,1, 7);
-sample.c3 = extractView(LF, 1,pq_max, 7);
-sample.c4 = extractView(LF, pq_max,pq_max, 7);
+scale=1.; offset=0.;
+if new_model
+  scale=2.;
+  offset=.5;
+end
+sample.c1 = extractView(LF, 1,1, 7, scale,offset);
+sample.c2 = extractView(LF, pq_max,1, 7, scale,offset);
+sample.c3 = extractView(LF, 1,pq_max, 7, scale,offset);
+sample.c4 = extractView(LF, pq_max,pq_max, 7, scale,offset);
 
+%%
 a = numel(1:step:7); % angular resolution of the synthesized LF
 [h, w, c] = size(LF);
 LF_prime = zeros(round(h/angul), round(w/angul), c, a, a, 'single'); % buffer to store synthesized LF
@@ -115,7 +128,7 @@ for p=1:step:7
     pred = squeeze(uint8(prediction{'pred'})); % synthesized view
     D = squeeze(single(prediction{'disp'})); % disparities
     m = squeeze(single(prediction{'m'})); % fusion matrix
-    clear prediction;    
+    clear prediction;   
     
     % generate disparity map
     [M,I] = max(m, [], 3);
@@ -161,7 +174,7 @@ for p=1:step:7
         showDisparities(D, disp_fig);
       end      
       
-      key = input("Any:", 's');
+      key = input("Enter [continue]/'o'+Enter [End visualization]:", 's');
       if strcmp(key, 'o')
         to_show = false;
       end
@@ -174,7 +187,7 @@ elapsed_time = toc;
 disp(strcat("Time per view: ", num2str(elapsed_time/a)));
 
 %%
-function view = extractView(LF, p, q, angul)
+function view = extractView(LF, p, q, angul, scale, offset)
 % extractView  Extract a view from light field (LF) image.
 %   LF      -   Input light field image with assumed dimension format HWC.
 %   p       -   Horizontal angular position in LF.
@@ -183,6 +196,11 @@ function view = extractView(LF, p, q, angul)
 %
 %   return  - A specified view LF(p,q,:,:,:) in a dimension format 1CHW.
 
+  if nargin<5
+    offset = 0.;
+    scale  = 1.;
+  end
+
   [h,w,c] = size(LF);
   h_ = h/angul;
   w_ = w/angul;
@@ -190,9 +208,18 @@ function view = extractView(LF, p, q, angul)
   view = zeros(1,c,h_,w_, 'single');
   
   for c_id=1:c
-    view(:,c_id,:,:) = single(LF(p:angul:end,q:angul:end,c_id))/255.;
+    view(:,c_id,:,:) = ...
+      (single(LF(p:angul:end,q:angul:end,c_id))/255.) * scale - offset;
   end
   
+end
+
+function img = normalize(img, offset, scale)
+  if nargin<2
+    offset=0.;
+    scale =1.;
+  end
+  img = (img+offset) * scale;
 end
 
 function showDisparities(D, disp_fig)
@@ -242,4 +269,3 @@ function reloadPy()
   py.importlib.reload(net_mod);
 
 end
-

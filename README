@@ -5,31 +5,34 @@ README File.
 The code consists of three parts: View Synthesis, Renderer and GUI. View synthesis stores a model of the network presented in OAVS paper with the implementation of the inference phase and MATLAB wrapper around it. Renderer allows rendering of provided light field image based on the selected synthetic aperture parameters including perspective shift and refocusing. Finally, GIU allows communication with an instance of the Renderer class by setting the parameters of the synthetic aperture and visualization of the rendered image.
 
 Requrements:
-- Python (View Synthesis)
+- Python (for View Synthesis)
 - Python modules:
-  - numpy
   - torch
   - torchvision
-  - opencv-python
-- MATLAB (GUI)
-  
-  
-The code was verified on Ubuntu 16.04 and 18.04.
-Tested using Python version 3.6. The moduels were
-installed using pip, e.g.
-  pip install torch.
-The version of the required moduels at test time were:
-  opencv-python 4.4.0.42
-  torch         1.6.0
-  torchvision   0.7.0
+  If exploring in Notebook the following modules are also necessary:
+    - numpy
+    - opencv-python
+    - matplotlib
+- MATLAB (for GUI)
+ 
 
-Tested on MATLAB R2018b and R2020a. Note MATLAB supports
-Python version 2.7, 3.5 and 3.6
-(https://www.mathworks.com/matlabcentral/answers/427187-problem-with-python-numpy).
+View Synthesis (VS):
+--------------------
+Inside Synthesis folder, one can find Notebook file OAVS_test.ipynb and MATLAB file OAVS_test.m which allows testing the VS approach.
 
-One can make a new environment in Anaconda and execute in terminal
->> source activate conda_environment
->> matlab
-which should set approapriate installed python environment for MATLAB.
+The code was tested on Ubuntu 18.04 using CPU. The environment was set as
+follows:
+- Installed new virtual environement using venv and Python 3.6.9
+  $ /usr/bin/python3 -m venv env_name (sudo apt-get install python3-venv)
+- Activate the new environment
+  $ source env_name/bin/activate
+- Installed torch 1.5 and torchvision
+  $ pip install torch==1.5
+  $ pip install torchvision
+- Run matlab
+
+In the similar manner one can call
+  $ jupyter notebook
+in the terminal and navigate to Synthesis folder in order to test VS in Python.
 
 Navarro, J., and Sabater, N.Learning occlusion-aware view synthesisfor light fields.arXiv preprint arXiv:1905.11271(2019).

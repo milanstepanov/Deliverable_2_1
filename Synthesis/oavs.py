@@ -21,36 +21,44 @@ class OAVS():
 
         print("Loading model...")
         try: 
-            if self.use_cuda:
-              checkpoint = torch.load(path_to_model)      
-            else:
-              checkpoint = torch.load(path_to_model,
-                                      map_location=torch.device('cpu')) 
+          if self.use_cuda:
+            checkpoint = torch.load(path_to_model)      
+          else:
+            checkpoint = torch.load(path_to_model, map_location=torch.device('cpu')) 
 
-            print("Loaded checkpoint ", path_to_model)
-            
-            try:
-              self.net.load_state_dict(checkpoint['model_state_dict'])
-              print("Loaded state")
-            except:
-              print("Could not load network state.")
+          print("Loaded checkpoint ", path_to_model)
 
-            self.net.eval()
-            print('Model loaded.')
+          try:
+            self.net.load_state_dict(checkpoint['model_state_dict'])
+            print("Loaded state")
+          except:
+            print("Could not load network state.")
 
-        except:            
-            print('Model not loaded.')
+          print('Model loaded.')
+
+        except:
+          print('Model not loaded.')
+
+        self.net.eval()
         
-    def forward(self, sample):
+    def forward(self, sample, new_model=True):
         
-        with torch.no_grad():                
+        with torch.no_grad():  
+
+              
             prediction = self.net.forward(sample['p'], sample['q'],
                                           sample['c1'], sample['c2'],
                                           sample['c3'], sample['c4'])
+            #print("Stat:");
+            #print(prediction[0].min(), prediction[0].max())
             
-            out = np.ascontiguousarray(prediction[0].permute((0,2,3,1)).cpu().detach().numpy(), dtype=np.float32)*255
+            if new_model:
+              out = ((np.ascontiguousarray(prediction[0].permute((0,2,3,1)).cpu().detach().numpy(), dtype=np.float32)+.5)*.5)*255
+            else:
+              out = np.ascontiguousarray(prediction[0].permute((0,2,3,1)).cpu().detach().numpy(), dtype=np.float32)*255
+            
             disp = np.ascontiguousarray(prediction[3].permute((0,2,3,1)).cpu().detach().numpy(), dtype=np.float32)
             m = np.ascontiguousarray(prediction[2].permute((0,2,3,1)).cpu().detach().numpy(), dtype=np.float32)
             
-            return {"pred": out.astype(np.uint8), "disp": disp, "m": m}
+            return {"pred": out.astype(np.uint8), "disp": disp, "m": m} #: 
         

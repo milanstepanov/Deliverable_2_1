@@ -1,7 +1,12 @@
 # Implementation of the view synthesis approach following the paper 
 # "Learning Occlusion-Aware View Synthesis for Light Fields" by Navarro et
 # al.
-
+try:
+    import os
+    del os.environ['MKL_NUM_THREADS']
+except:
+    print("")
+    
 import torch
 from torch import nn
 import torch.nn.functional as F

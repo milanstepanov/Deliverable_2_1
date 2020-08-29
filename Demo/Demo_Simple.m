@@ -1,18 +1,27 @@
 %% Run Rendering Application
 
-%% Clear environment
+%% Clear and prepare environment
 clear; close all; clc;
+
+py.sys.setdlopenflags(int32(10));
+
+os = py.importlib.import_module('os');
+clear os.environ.MKL_NUM_THREADS
 
 %% PARAMETERS TO SET
 % Set path to the python with installed PyTorch module
 python_path = [];
 root_dir = []; % keeps folders "Demo", "GUI", "Render" and Synthesis"
+if isempty(root_dir) % if the folder is not defined it is assumed that the
+                     % current folder is the root
+  root_dir = pwd;
+end
 
 path_to_test_lenslet = fullfile(root_dir,"Demo/IMG_2312_eslf.png");
 angul = 7; % set the angular size of the input lenslet
-is_8bits = true;
+is_8bits = false;
 
-gamma = .45;
+gamma = .4;
 
 %% Set Python
 % If MATLAB is invoked from the terminal with activated appropriate
@@ -23,10 +32,7 @@ if ~isempty(python_path)
   end
 end
 
-% flag = int32(bitor(2, 8));
-% py.sys.setdlopenflags(flag);
-
-%%
+ %%
 if isempty(root_dir)
   root_dir = pwd;
 end
@@ -46,10 +52,10 @@ addpath(fullfile(root_dir, 'Demo'), ...
   py.importlib.reload(mod);
 
   %% Load network
-  net = mod.OAVS(...
-    fullfile(pwd, ...
-             "/model_corr_b3_no_corners_no_decay_grad_best"), ...
-    false);
+new_model = true;
+net = mod.OAVS(...
+  fullfile(pwd, "model_corr_b3_no_corners_no_decay_grad_flowers_gamma_best"),...
+  false);
 
   %% Load Light Field data
   path_to_lenslet = path_to_test_lenslet;
@@ -75,10 +81,16 @@ addpath(fullfile(root_dir, 'Demo'), ...
   pq_max = pq_min + 7 - 1; % TODO: select the position of the corner views
 
   % extract corner views
-  sample.c1 = extractView(LF, pq_min,pq_min, angul);
-  sample.c2 = extractView(LF, pq_max,pq_min, angul);
-  sample.c3 = extractView(LF, pq_min,pq_max, angul);
-  sample.c4 = extractView(LF, pq_max,pq_max, angul);
+  scale  = 1.;
+  offset = 0.;
+  if new_model
+    scale=2.;
+    offset=.5;
+  end
+  sample.c1 = extractView(LF, 1,1, 7, scale,offset);
+  sample.c2 = extractView(LF, pq_max,1, 7, scale,offset);
+  sample.c3 = extractView(LF, 1,pq_max, 7, scale,offset);
+  sample.c4 = extractView(LF, pq_max,pq_max, 7, scale,offset);
 
   %%
   a = numel(1:step:7); % angular resolution of the synthesized LF
@@ -127,14 +139,22 @@ cd(root_dir)
 RenderAppMain(LF_prime, Disparities);
 
 %% Auxiliary
-function view = extractView(LF, p, q, angul)
+function view = extractView(LF, p, q, angul, scale, offset)
 % extractView  Extract a view from light field (LF) image.
 %   LF      -   Input light field image with assumed dimension format HWC.
 %   p       -   Horizontal angular position in LF.
 %   q       -   Vertical angular position in LF.
 %   angul   -   Angular size of the input LF.
+%   scale   -   Value to scale input intensities.
+%   offset  -   Value to add to the scaled intensities
+%               i = scale*i - offset
 %
 %   return  - A specified view LF(p,q,:,:,:) in a dimension format 1CHW.
+
+  if nargin<5
+    offset = 0.;
+    scale  = 1.;
+  end
 
   [h,w,c] = size(LF);
   h_ = h/angul;
@@ -143,8 +163,18 @@ function view = extractView(LF, p, q, angul)
   view = zeros(1,c,h_,w_, 'single');
   
   for c_id=1:c
-    view(:,c_id,:,:) = single(LF(p:angul:end,q:angul:end,c_id))/255.;
+    view(:,c_id,:,:) = ...
+      (single(LF(p:angul:end,q:angul:end,c_id))/255.) * scale - offset;
   end
   
 end
+
+function img = normalize(img, offset, scale)
+  if nargin<2
+    offset=0.;
+    scale =1.;
+  end
+  img = (img+offset) * scale;
+end
+
 
